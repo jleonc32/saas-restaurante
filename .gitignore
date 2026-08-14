@@ -1,0 +1,17 @@
+# Entornos virtuales
+venv/
+env/
+
+# Archivos compilados de Python
+__pycache__/
+*.pyc
+
+# Base de datos local de SQLite (¡No subir datos de prueba!)
+db.sqlite3
+
+# Archivos de entorno (contraseñas, secret keys)
+.env
+
+# Archivos multimedia subidos por usuarios (imágenes, modelos 3D)
+media/
+.vscode/
