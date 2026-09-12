@@ -19,7 +19,7 @@ class Categoria(models.Model):
     def __str__(self):
         return f"{self.marca.nombre_comercial} - {self.nombre}"
 
-    class Meta:
+    class Mesa:
         verbose_name = "Categoría"
         verbose_name_plural = "Categorías"
         ordering = ['orden'] # Esto asegura que Django siempre las devuelva ordenadas

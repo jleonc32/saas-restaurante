@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menú - {{ marca.nombre_comercial }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f8f9fa; margin: 0; padding: 0; }
+        .header { background-color: {{ marca.color_principal }}; color: white; padding: 20px; text-align: center; }
+        .header img { max-width: 100px; border-radius: 50%; margin-bottom: 10px; }
+        .info-mesa { background-color: #333; color: white; text-align: center; padding: 5px; font-size: 14px; }
+        .container { padding: 15px; max-width: 600px; margin: auto; }
+        .categoria-titulo { border-bottom: 2px solid {{ marca.color_principal }}; color: #333; margin-top: 30px; padding-bottom: 5px; }
+        .plato-card { background: white; border-radius: 10px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; align-items: center;}
+        .plato-info { flex-grow: 1; }
+        .plato-nombre { font-size: 18px; font-weight: bold; margin: 0 0 5px 0; }
+        .plato-desc { font-size: 14px; color: #666; margin: 0 0 10px 0; }
+        .plato-precio { font-size: 16px; font-weight: bold; color: {{ marca.color_principal }}; }
+        .plato-img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; margin-left: 15px; }
+    </style>
+</head>
+<body>
+
+    <!-- CABECERA (Logo y Color de la Marca) -->
+    <div class="header">
+        {% if marca.logo %}
+            <img src="{{ marca.logo.url }}" alt="Logo">
+        {% endif %}
+        <h1 style="margin: 0;">{{ marca.nombre_comercial }}</h1>
+        <p style="margin: 5px 0 0 0;">{{ sucursal.nombre_sucursal }}</p>
+    </div>
+    <div class="info-mesa">
+        Estás en la: <strong>{{ mesa.identificador }}</strong>
+    </div>
+
+    <!-- CUERPO DEL MENÚ -->
+    <div class="container">
+        {% for categoria, disponibilidades in menu_organizado.items %}
+            <h2 class="categoria-titulo">{{ categoria.nombre }}</h2>
+            
+            {% for item in disponibilidades %}
+                <div class="plato-card">
+                    <div class="plato-info">
+                        <h3 class="plato-nombre">{{ item.plato.nombre }}</h3>
+                        <p class="plato-desc">{{ item.plato.descripcion }}</p>
+                        <span class="plato-precio">${{ item.precio_local }}</span>
+                    </div>
+                    {% if item.plato.imagen_foto %}
+                        <img class="plato-img" src="{{ item.plato.imagen_foto.url }}" alt="{{ item.plato.nombre }}">
+                    {% endif %}
+                </div>
+            {% endfor %}
+            
+        {% empty %}
+            <p style="text-align: center; color: #777;">No hay platos disponibles en este momento.</p>
+        {% endfor %}
+    </div>
+
+</body>
+</html>
