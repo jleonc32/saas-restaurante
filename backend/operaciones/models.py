@@ -1,4 +1,7 @@
 import uuid
+import qrcode # libreria QR
+from io import BytesIO #nuevo: para manejar la imagen en memoria 
+from django.core.files import File #para guardar el archivo en Django
 from django.db import models
 from django.utils import timezone
 from django.conf import settings # Para importar tu modelo de Usuario personalizado
@@ -37,7 +40,29 @@ class Mesa(models.Model):
     identificador = models.CharField(max_length=50, help_text="Ej: Mesa 5, VIP 1, Terraza")
     qr_token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     esta_activa = models.BooleanField(default=True)
+    #  Nuevo campo: aqui se guardara la imagen generada 
+    qr_imagen = models.ImageField(upload_to='qrs_mesas/', blank=True, null=True)
 
+    def save(self, *args, **kwargs):
+        #si la mesa aun no tiene imagen qr generada, la creamos 
+        if not self.qr_imagen:
+            # 1 armamos la url (por ahora local, en un futuro sera tu dominio real)
+            url_menu = f"http://127.0.0.1:8000/menu/{self.qr_token}/"
+            
+            # 2 generamos el grafico el QR
+            imagen_qr = qrcode.make(url_menu)
+            
+            # 3 preparamos para guardarlo como archivo png
+            buffer = BytesIO()
+            imagen_qr.save(buffer, format='PNG')
+            nombre_archivo = f"qr_sucursal_{self.sucursal.id}_mesa_{self.identificador}.png"
+            
+            # 4 lo guardamos en el campo qr_imagen
+            self.qr_imagen.save(nombre_archivo, File(buffer), save=False)
+            
+        # 5 ejecutamos el guardado normal en Django
+        super().save(*args, **kwargs)
+    
     def __str__(self):
         return f"{self.sucursal.nombre_sucursal} - {self.identificador}"
 
