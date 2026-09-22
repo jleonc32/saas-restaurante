@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedido - {{ mesa.identificador }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; display: flex; height: 100vh; }
+        
+        .menu-section { flex: 6; padding: 20px; overflow-y: auto; }
+        .grid-platos { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
+        /* Añadimos un efecto de clic (active) para que se sienta como una app táctil */
+        .plato-btn { 
+            background: white; border: 1px solid #ddd; padding: 15px; border-radius: 8px;
+            cursor: pointer; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: 0.1s;
+        }
+        .plato-btn:hover { border-color: #28a745; background-color: #f8fff9; }
+        .plato-btn:active { transform: scale(0.95); background-color: #e9f7ef; } 
+        .plato-nombre { font-weight: bold; margin-bottom: 5px; color: #333; }
+        .plato-precio { color: #28a745; font-size: 18px; }
+
+        .ticket-section { flex: 4; background: white; border-left: 2px solid #ddd; padding: 20px; display: flex; flex-direction: column; }
+        .ticket-header { border-bottom: 2px dashed #ccc; padding-bottom: 10px; margin-bottom: 15px; text-align: center;}
+        .ticket-items { flex-grow: 1; overflow-y: auto; padding-right: 10px; }
+        .ticket-total { border-top: 2px dashed #ccc; padding-top: 15px; margin-top: 15px; }
+        .btn-cobrar { background: #007bff; color: white; width: 100%; padding: 15px; border: none; border-radius: 5px; font-size: 18px; cursor: pointer; font-weight: bold;}
+        .btn-cobrar:hover { background: #0056b3; }
+        
+        /* Diseño de cada ítem en el carrito */
+        .item-carrito { display: flex; justify-content: space-between; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px; font-size: 15px; }
+    </style>
+</head>
+<body>
+    {% csrf_token %}
+    <div class="menu-section">
+        <h2>🍽️ Agregar a {{ mesa.identificador }}</h2>
+        <div class="grid-platos">
+            {% for item in menu_disponible %}
+                <!-- AQUÍ EL CAMBIO: Llamamos a la función de JS al hacer clic -->
+                <div class="plato-btn" onclick="agregarPlato('{{ item.plato.id }}', '{{ item.plato.nombre }}', {{ item.precio_local|safe }})">
+                    <div class="plato-nombre">{{ item.plato.nombre }}</div>
+                    <div class="plato-precio">${{ item.precio_local }}</div>
+                </div>
+            {% empty %}
+                <p>No hay platos configurados.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="ticket-section">
+        <div class="ticket-header">
+            <h2 style="margin: 0;">🧾 Cuenta</h2>
+            <small>{{ mesa.sucursal.nombre_sucursal }} - {{ mesa.identificador }}</small>
+        </div>
+        
+        <!-- Le pusimos el ID 'ticket-items' para que JS inserte el HTML aquí -->
+        <div class="ticket-items" id="ticket-items">
+            <p style="text-align: center; color: #888;">(El pedido está vacío)</p>
+        </div>
+
+        <div class="ticket-total">
+            <div style="display: flex; justify-content: space-between; font-size: 22px; font-weight: bold; margin-bottom: 15px;">
+                <span>Total:</span>
+                <span id="ticket-total-monto">$0.00</span>
+            </div>
+            <button class="btn-cobrar" onclick="enviarPedido()">Generar Cuenta (Facturar)</button>
+        </div>
+    </div>
+
+    <!-- LÓGICA DEL CARRITO EN TIEMPO REAL -->
+    <script>
+        // Nuestro arreglo para almacenar los platos temporalmente
+        let pedido = []; 
+
+        function agregarPlato(id, nombre, precio) {
+            precio = parseFloat(precio);
+            
+            // Buscamos si el plato ya está en el arreglo usando su ID
+            let itemExistente = pedido.find(p => p.id === id);
+            
+            if (itemExistente) {
+                // Si ya existe, solo le sumamos 1 a la cantidad
+                itemExistente.cantidad += 1;
+            } else {
+                // Si no existe, metemos un diccionario nuevo al arreglo
+                pedido.push({ id: id, nombre: nombre, precio: precio, cantidad: 1 });
+            }
+            
+            actualizarTicket();
+        }
+
+        function actualizarTicket() {
+            const contenedor = document.getElementById('ticket-items');
+            const totalTexto = document.getElementById('ticket-total-monto');
+            
+            contenedor.innerHTML = ''; // Limpiamos el ticket visualmente
+            let total = 0;
+
+            if (pedido.length === 0) {
+                contenedor.innerHTML = '<p style="text-align: center; color: #888;">(El pedido está vacío)</p>';
+            } else {
+                // Recorremos nuestro arreglo y dibujamos cada elemento
+                pedido.forEach((item) => {
+                    let subtotal = item.precio * item.cantidad;
+                    total += subtotal;
+                    
+                    contenedor.innerHTML += `
+                        <div class="item-carrito">
+                            <div><strong>${item.cantidad}x</strong> ${item.nombre}</div>
+                            <div>$${subtotal.toFixed(2)}</div>
+                        </div>
+                    `;
+                });
+            }
+            
+            // Actualizamos el número grande del total
+            totalTexto.innerText = '$' + total.toFixed(2);
+        }
+
+        function enviarPedido() {
+            if (pedido.length === 0) {
+                alert("El pedido está vacío. Agrega platos primero.");
+                return;
+            }
+
+            // Calculamos el total de nuevo por seguridad
+            let totalPedido = pedido.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+            
+            // Extraemos el token de seguridad de Django
+            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            // Preparamos el paquete de datos
+            const datos = {
+                mesa_id: "{{ mesa.id }}",
+                items: pedido,
+                total: totalPedido
+            };
+
+            // Enviamos los datos a nuestra nueva URL usando Fetch API
+            fetch("{% url 'procesar_pedido' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify(datos)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    alert("¡Cobro exitoso! El pedido ha sido guardado.");
+                    window.location.href = "{% url 'panel_mesas' mesa.sucursal.id %}"; // Volvemos al mapa de mesas
+                } else {
+                    alert("Hubo un error: " + data.mensaje);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Mesero - {{ sucursal.nombre_sucursal }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #e9ecef; margin: 0; padding: 0; }
+        .header { background-color: #343a40; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { margin: 0; font-size: 20px; }
+        .container { padding: 20px; max-width: 1200px; margin: auto; }
+        
+        /* Estilos tipo Tablet/POS */
+        .grid-mesas { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; margin-top: 20px; }
+        .mesa-card { 
+            background: white; border-radius: 10px; padding: 30px 15px; 
+            text-align: center; font-size: 18px; font-weight: bold; color: #333;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-decoration: none;
+            border: 2px solid transparent; transition: 0.2s;
+        }
+        .mesa-card:hover { border-color: #007bff; background-color: #f8f9fa; }
+        
+        /* Colores de estado (Por ahora todas libres, luego lo haremos dinámico) */
+        .estado-libre { border-bottom: 5px solid #28a745; }
+    </style>
+</head>
+<body>
+
+    <!-- CABECERA DEL SISTEMA -->
+    <div class="header">
+        <h1>👨‍🍳 Panel de Servicio</h1>
+        <span>{{ sucursal.nombre_sucursal }}</span>
+    </div>
+
+    <!-- CUADRÍCULA DE MESAS -->
+    <div class="container">
+        <h2 style="color: #495057;">Selecciona una mesa:</h2>
+        
+        <div class="grid-mesas">
+            {% for mesa in mesas %}
+                <!-- El botón de cada mesa -->
+                <a href="{% url 'tomar_pedido' mesa.id %}" class="mesa-card estado-libre">
+                    {{ mesa.identificador }}
+                </a>
+            {% empty %}
+                <p>No hay mesas configuradas en esta sucursal.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+</body>
+</html>
