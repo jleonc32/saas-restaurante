@@ -1,16 +1,23 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from .models import Mesa, DisponibilidadSucursal, Pedido, DetallePedido
 from gestion.models import Sucursal
 import json
 from django.http import JsonResponse
 from menu.models import Plato
+from django.db.models import Count, Q
 
 def panel_mesas(request, sucursal_id):
-    # 1. Buscamos la sucursal específica donde está trabajando el mesero
+    # 1. Buscamos la sucursal específica
     sucursal = get_object_or_404(Sucursal, id=sucursal_id)
     
-    # 2. Traemos todas las mesas que estén activas, ordenadas por nombre
-    mesas = Mesa.objects.filter(sucursal=sucursal, esta_activa=True).order_by('identificador')
+    # 2. Traemos las mesas, pero le "anotamos" cuántos pedidos activos tienen
+    mesas = Mesa.objects.filter(sucursal=sucursal, esta_activa=True).annotate(
+        cuentas_abiertas=Count(
+            'pedidos', 
+            # Filtramos para contar solo los pedidos que NO están pagados
+            filter=Q(pedidos__estado__in=['RECIBIDO', 'PREPARACION', 'LISTO', 'ENTREGADO'])
+        )
+    ).order_by('identificador')
     
     context = {
         'sucursal' : sucursal,
@@ -50,7 +57,7 @@ def procesar_pedido(request):
             nuevo_pedido = Pedido.objects.create(
                 mesa=mesa,
                 total_estimado=total,
-                estado='PAGADO'
+                estado='RECIBIDO'
             )
 
             for item in items:
@@ -74,4 +81,47 @@ def procesar_pedido(request):
         except Exception as e:
             return JsonResponse({'status': 'error', 'mensaje': str(e)})
     
+    return JsonResponse({'status': 'error', 'mensaje': 'Método no permitido'})
+
+def ver_cuentas_mesa(request, mesa_id):
+    mesa = get_object_or_404(Mesa, id=mesa_id)
+    
+    # Buscamos los pedidos de esta mesa que sigan activos
+    pedidos_activos = Pedido.objects.filter(
+        mesa=mesa,
+        estado__in=['RECIBIDO', 'PREPARACION', 'LISTO', 'ENTREGADO']
+    ).order_by('fecha_creacion')
+    
+    context = {
+        'mesa': mesa,
+        'pedidos': pedidos_activos,
+    }
+    return render(request, 'operaciones/ver_cuentas_mesa.html', context)
+
+def detalle_cuenta(request, pedido_id):
+    # Buscamos el pedido específico
+    pedido = get_object_or_404(Pedido, id=pedido_id)
+    
+    # Traemos todos los platos que pertenecen a esta cuenta
+    detalles = pedido.detalles.all()
+    
+    context = {
+        'pedido': pedido,
+        'detalles': detalles,
+        'mesa': pedido.mesa,
+    }
+    return render(request, 'operaciones/detalle_cuenta.html', context)
+
+def cobrar_pedido(request, pedido_id):
+    if request.method == 'POST':
+        # 1. Buscamos el pedido
+        pedido = get_object_or_404(Pedido, id=pedido_id)
+        
+        # 2. Le cambiamos el estado a PAGADO
+        pedido.estado = 'PAGADO'
+        pedido.save()
+        
+        # 3. Redirigimos al mesero de vuelta al mapa de mesas de su sucursal
+        return redirect('panel_mesas', sucursal_id=pedido.mesa.sucursal.id)
+        
     return JsonResponse({'status': 'error', 'mensaje': 'Método no permitido'})

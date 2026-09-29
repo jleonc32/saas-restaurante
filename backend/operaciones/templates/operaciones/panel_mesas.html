@@ -22,6 +22,11 @@
         
         /* Colores de estado (Por ahora todas libres, luego lo haremos dinámico) */
         .estado-libre { border-bottom: 5px solid #28a745; }
+        /* Colores de estado */
+        .estado-libre { border-bottom: 5px solid #28a745; }
+        .estado-ocupada { border-bottom: 5px solid #dc3545; background-color: #fffafb; }
+        .badge { background: #dc3545; color: white; padding: 3px 8px; border-radius: 12px; font-size: 14px; position: absolute; top: -10px; right: -10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .mesa-card { position: relative; /* Necesario para que el badge se posicione bien */ }
     </style>
 </head>
 <body>
@@ -38,10 +43,17 @@
         
         <div class="grid-mesas">
             {% for mesa in mesas %}
-                <!-- El botón de cada mesa -->
-                <a href="{% url 'tomar_pedido' mesa.id %}" class="mesa-card estado-libre">
-                    {{ mesa.identificador }}
-                </a>
+                <!-- Verificamos si la mesa tiene pedidos activos -->
+                {% if mesa.cuentas_abiertas > 0 %}
+                    <a href="{% url 'ver_cuentas_mesa' mesa.id %}" class="mesa-card estado-ocupada">
+                        {{ mesa.identificador }}
+                        <span class="badge">{{ mesa.cuentas_abiertas }}</span>
+                    </a>
+                {% else %}
+                    <a href="{% url 'tomar_pedido' mesa.id %}" class="mesa-card estado-libre">
+                        {{ mesa.identificador }}
+                    </a>
+                {% endif %}
             {% empty %}
                 <p>No hay mesas configuradas en esta sucursal.</p>
             {% endfor %}

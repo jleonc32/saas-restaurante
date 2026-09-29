@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuentas - {{ mesa.identificador }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 0; }
+        .header { background-color: #343a40; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .header a { color: white; text-decoration: none; font-weight: bold; background: #495057; padding: 5px 10px; border-radius: 5px; }
+        .container { padding: 20px; max-width: 800px; margin: auto; }
+        
+        .cuenta-card { background: white; padding: 20px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 5px solid #ffc107; display: flex; justify-content: space-between; align-items: center; }
+        .cuenta-info h3 { margin: 0 0 5px 0; color: #333; }
+        .cuenta-info p { margin: 0; color: #666; font-size: 15px; }
+        
+        .btn-accion { background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; text-decoration: none; }
+        .btn-nueva { display: block; background: #007bff; color: white; text-align: center; padding: 15px; border-radius: 8px; text-decoration: none; font-size: 18px; font-weight: bold; margin-top: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <span style="font-size: 18px;">🍽️ {{ mesa.identificador }} - Gestión de Cuentas</span>
+        <a href="{% url 'panel_mesas' mesa.sucursal.id %}">⬅ Volver al Mapa</a>
+    </div>
+
+    <div class="container">
+        <h2 style="color: #495057;">Cuentas Activas</h2>
+        
+        {% for pedido in pedidos %}
+        <div class="cuenta-card">
+            <div class="cuenta-info">
+                <h3>Cuenta #{{ pedido.id }}</h3>
+                <p>Estado: <strong>{{ pedido.estado }}</strong> | Total acumulado: ${{ pedido.total_estimado }}</p>
+            </div>
+            <!-- Botón temporal. Pronto lo conectaremos a la vista de cobro -->
+           <!-- Reemplazamos el <button> por un enlace <a> -->
+            <a href="{% url 'detalle_cuenta' pedido.id %}" class="btn-accion">Ver / Cobrar</a>
+        </div>
+        {% endfor %}
+
+        <!-- El botón que reutiliza nuestra vista de tomar_pedido para una cuenta separada -->
+        <a href="{% url 'tomar_pedido' mesa.id %}" class="btn-nueva">+ Abrir nueva cuenta separada</a>
+    </div>
+</body>
+</html>
