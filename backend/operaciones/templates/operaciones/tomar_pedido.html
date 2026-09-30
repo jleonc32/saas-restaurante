@@ -63,7 +63,7 @@
                 <span>Total:</span>
                 <span id="ticket-total-monto">$0.00</span>
             </div>
-            <button class="btn-cobrar" onclick="enviarPedido()">Generar Cuenta (Facturar)</button>
+            <button class="btn-cobrar" onclick="enviarPedido()" style="background: #ff9800;">Enviar a Cocina 👨‍🍳</button>
         </div>
     </div>
 
@@ -148,7 +148,7 @@
             .then(response => response.json())
             .then(data => {
                 if(data.status === 'success') {
-                    alert("¡Cobro exitoso! El pedido ha sido guardado.");
+                    alert("¡El pedido ha sido enviado correctamente!");
                     window.location.href = "{% url 'panel_mesas' mesa.sucursal.id %}"; // Volvemos al mapa de mesas
                 } else {
                     alert("Hubo un error: " + data.mensaje);

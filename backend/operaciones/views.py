@@ -154,3 +154,46 @@ def imprimir_ticket(request, pedido_id):
         return HttpResponse('Hubo un error al generar el PDF', status=500)
 
     return response
+
+def pantalla_cocina(request, sucursal_id):
+    sucursal = get_object_or_404(Sucursal, id=sucursal_id)
+    
+    # Traemos solo los pedidos que la cocina necesita ver y los ordenamos por el más antiguo primero
+    pedidos = Pedido.objects.filter(
+        mesa__sucursal=sucursal,
+        estado__in=['RECIBIDO', 'PREPARACION']
+    ).order_by('fecha_creacion')
+    
+    context = {
+        'sucursal': sucursal,
+        'pedidos': pedidos,
+    }
+    return render(request, 'operaciones/pantalla_cocina.html', context)
+
+def actualizar_estado_pedido(request, pedido_id):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            nuevo_estado = data.get('estado')
+            
+            pedido = get_object_or_404(Pedido, id=pedido_id)
+            pedido.estado = nuevo_estado
+            pedido.save()
+            
+            return JsonResponse({'status': 'success', 'nuevo_estado': pedido.estado})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'mensaje': str(e)})
+            
+    return JsonResponse({'status': 'error', 'mensaje': 'Método no permitido'})
+
+def entregar_pedido(request, pedido_id):
+    if request.method == 'POST':
+        pedido = get_object_or_404(Pedido, id=pedido_id)
+        # Cambiamos el estado confirmando que llegó a la mesa
+        pedido.estado = 'ENTREGADO'
+        pedido.save()
+        
+        # Lo devolvemos a la misma pantalla de gestión de esa mesa
+        return redirect('ver_cuentas_mesa', mesa_id=pedido.mesa.id)
+        
+    return JsonResponse({'status': 'error', 'mensaje': 'Método no permitido'})

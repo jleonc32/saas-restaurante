@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KDS - Cocina {{ sucursal.nombre_sucursal }}</title>
+    <style>
+        /* Diseño oscuro tipo Monitor de Cocina */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #ffffff; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+        .header h1 { margin: 0; color: #4caf50; font-size: 24px; }
+        
+        .grid-pedidos { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        
+        .ticket { background-color: #1e1e1e; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden; }
+        .ticket-header { padding: 15px; font-weight: bold; font-size: 18px; display: flex; justify-content: space-between; border-bottom: 1px solid #333; }
+        
+        /* Colores dinámicos según el estado */
+        .estado-RECIBIDO .ticket-header { background-color: #0d47a1; color: white; } /* Azul */
+        .estado-PREPARACION .ticket-header { background-color: #e65100; color: white; } /* Naranja/Amarillo */
+        
+        .ticket-body { padding: 15px; flex-grow: 1; }
+        .item-plato { font-size: 18px; margin-bottom: 10px; border-bottom: 1px dashed #444; padding-bottom: 5px; }
+        .item-cantidad { font-weight: bold; color: #4caf50; margin-right: 10px; }
+        
+        .ticket-footer { padding: 15px; background-color: #252525; }
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-empezar { background-color: #ff9800; color: white; }
+        .btn-empezar:hover { background-color: #f57c00; }
+        .btn-listo { background-color: #4caf50; color: white; }
+        .btn-listo:hover { background-color: #388e3c; }
+    </style>
+</head>
+<body>
+    <!-- Necesitamos el token CSRF para que JS pueda comunicarse con Django -->
+    {% csrf_token %}
+
+    <div class="header">
+        <h1>👨‍🍳 KDS - {{ sucursal.nombre_sucursal }}</h1>
+        <span style="color: #888;">Actualización automática activada...</span>
+    </div>
+
+    <div class="grid-pedidos">
+        {% for pedido in pedidos %}
+        <!-- Le añadimos la clase del estado para que CSS la pinte de azul o naranja -->
+        <div class="ticket estado-{{ pedido.estado }}">
+            <div class="ticket-header">
+                <span>{{ pedido.mesa.identificador }}</span>
+                <span>#{{ pedido.id }}</span>
+            </div>
+            <div class="ticket-body">
+                {% for detalle in pedido.detalles.all %}
+                <div class="item-plato">
+                    <span class="item-cantidad">{{ detalle.cantidad }}x</span> 
+                    {{ detalle.disponibilidad.plato.nombre }}
+                </div>
+                {% empty %}
+                <p style="color: #888; font-size: 14px;">Sin detalles.</p>
+                {% endfor %}
+            </div>
+            
+            <div class="ticket-footer">
+                {% if pedido.estado == 'RECIBIDO' %}
+                    <button class="btn btn-empezar" onclick="cambiarEstado({{ pedido.id }}, 'PREPARACION')">Empezar a Preparar</button>
+                {% elif pedido.estado == 'PREPARACION' %}
+                    <button class="btn btn-listo" onclick="cambiarEstado({{ pedido.id }}, 'LISTO')">✅ Marcar como Listo</button>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div style="grid-column: 1 / -1; text-align: center; color: #666; font-size: 20px; margin-top: 50px;">
+            No hay pedidos pendientes en la cocina. ¡Buen trabajo!
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        // 1. Función para cambiar el estado enviando datos a Django en segundo plano
+        function cambiarEstado(pedidoId, nuevoEstado) {
+            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            fetch(`/cocina/actualizar-estado/${pedidoId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({ estado: nuevoEstado })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    // Si todo sale bien, recargamos la página para ver los cambios
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.mensaje);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        // 2. Refrescar la pantalla automáticamente cada 10 segundos
+        setInterval(() => {
+            window.location.reload();
+        }, 10000); 
+    </script>
+</body>
+</html>

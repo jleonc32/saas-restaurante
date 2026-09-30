@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cuentas - {{ mesa.identificador }}</title>
     <style>
+        @keyframes latido {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+        }
+        .btn-alerta { animation: latido 1.5s infinite; background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-bloqueado { background: #6c757d; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: not-allowed; font-weight: bold; }
+        
         body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 0; }
         .header { background-color: #343a40; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
         .header a { color: white; text-decoration: none; font-weight: bold; background: #495057; padding: 5px 10px; border-radius: 5px; }
@@ -31,11 +39,22 @@
         <div class="cuenta-card">
             <div class="cuenta-info">
                 <h3>Cuenta #{{ pedido.id }}</h3>
-                <p>Estado: <strong>{{ pedido.estado }}</strong> | Total acumulado: ${{ pedido.total_estimado }}</p>
+                <p>Estado: <strong>{{ pedido.estado }}</strong> | Total: ${{ pedido.total_estimado }}</p>
             </div>
-            <!-- Botón temporal. Pronto lo conectaremos a la vista de cobro -->
-           <!-- Reemplazamos el <button> por un enlace <a> -->
-            <a href="{% url 'detalle_cuenta' pedido.id %}" class="btn-accion">Ver / Cobrar</a>
+            
+            <!-- Lógica Inteligente de Botones -->
+            {% if pedido.estado == 'RECIBIDO' or pedido.estado == 'PREPARACION' %}
+                <button class="btn-bloqueado" disabled>⏳ En cocina...</button>
+                
+            {% elif pedido.estado == 'LISTO' %}
+                <form action="{% url 'entregar_pedido' pedido.id %}" method="POST" style="margin: 0;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-alerta">🔔 Recoger y Entregar</button>
+                </form>
+                
+            {% elif pedido.estado == 'ENTREGADO' %}
+                <a href="{% url 'detalle_cuenta' pedido.id %}" class="btn-accion" style="background: #007bff;">Ver / Cobrar</a>
+            {% endif %}
         </div>
         {% endfor %}
 
