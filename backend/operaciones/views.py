@@ -2,9 +2,12 @@ from django.shortcuts import render, get_object_or_404, redirect
 from .models import Mesa, DisponibilidadSucursal, Pedido, DetallePedido
 from gestion.models import Sucursal
 import json
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from menu.models import Plato
 from django.db.models import Count, Q
+from django.template.loader import get_template
+from xhtml2pdf import pisa
+
 
 def panel_mesas(request, sucursal_id):
     # 1. Buscamos la sucursal específica
@@ -125,3 +128,29 @@ def cobrar_pedido(request, pedido_id):
         return redirect('panel_mesas', sucursal_id=pedido.mesa.sucursal.id)
         
     return JsonResponse({'status': 'error', 'mensaje': 'Método no permitido'})
+
+def imprimir_ticket(request, pedido_id):
+    pedido = get_object_or_404(Pedido, id=pedido_id)
+    detalles = pedido.detalles.all()
+
+    # 1. Cargamos nuestro diseño de ticket
+    template = get_template('operaciones/ticket_pdf.html')
+    context = {
+        'pedido': pedido,
+        'detalles': detalles,
+        'mesa': pedido.mesa,
+    }
+    html = template.render(context)
+
+    # 2. Configuramos la respuesta para que el navegador sepa que es un PDF
+    response = HttpResponse(content_type='application/pdf')
+    # Usamos 'inline' para que el PDF se abra en una pestaña nueva listo para imprimir
+    response['Content-Disposition'] = f'inline; filename="ticket_{pedido.id}.pdf"'
+
+    # 3. La magia de xhtml2pdf convirtiendo todo
+    pisa_status = pisa.CreatePDF(html, dest=response)
+
+    if pisa_status.err:
+        return HttpResponse('Hubo un error al generar el PDF', status=500)
+
+    return response

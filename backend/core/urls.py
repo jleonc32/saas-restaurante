@@ -3,7 +3,7 @@ from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
 from menu.views import menu_digital
-from operaciones.views import panel_mesas, tomar_pedido, procesar_pedido, ver_cuentas_mesa, detalle_cuenta, cobrar_pedido
+from operaciones.views import panel_mesas, tomar_pedido, procesar_pedido, ver_cuentas_mesa, detalle_cuenta, cobrar_pedido, imprimir_ticket
 urlpatterns = [
     path('admin/', admin.site.urls),
     # Esta es la URL mágica. Captura el UUID del QR y se lo pasa a la vista
@@ -16,6 +16,8 @@ urlpatterns = [
     path('mesero/cuenta/<int:pedido_id>/', detalle_cuenta, name='detalle_cuenta'),
     # NUEVA RUTA: La acción invisible que procesa el pago
     path('mesero/cuenta/<int:pedido_id>/cobrar/', cobrar_pedido, name='cobrar_pedido'),
+    # NUEVA RUTA: Generador del PDF
+    path('mesero/cuenta/<int:pedido_id>/ticket/', imprimir_ticket, name='imprimir_ticket'),
 ]
 
 # Esto solo se usa en desarrollo local para poder ver las fotos y archivos 3D
