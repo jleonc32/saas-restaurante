@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import Mesa, DisponibilidadSucursal, Pedido, DetallePedido
+from .models import Mesa, DisponibilidadSucursal, Pedido, DetallePedido, PerfilEmpleado
 from gestion.models import Sucursal
 import json
 from django.http import JsonResponse, HttpResponse
@@ -7,8 +7,28 @@ from menu.models import Plato
 from django.db.models import Count, Q
 from django.template.loader import get_template
 from xhtml2pdf import pisa
+from django.db.models import Sum, Count
+from django.contrib.auth import login, authenticate, logout, get_user_model
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 
+# Esta función crea un decorador personalizado para verificar el rol
+def rol_requerido(*roles_permitidos):
+    def decorator(view_func):
+        def _wrapped_view(request, *args, **kwargs):
+            # Si no ha iniciado sesión o no tiene perfil, lo mandamos al login
+            if not request.user.is_authenticated or not hasattr(request.user, 'perfil'):
+                return redirect('login')
+            # Si su rol no está en la lista de permitidos, le bloqueamos el paso
+            if request.user.perfil.rol not in roles_permitidos:
+                raise PermissionDenied 
+            return view_func(request, *args, **kwargs)
+        return _wrapped_view
+    return decorator
+User = get_user_model() # Trae tu modelo de usuario personalizado de forma segura
 
+@rol_requerido('MESERO', 'GERENTE')
 def panel_mesas(request, sucursal_id):
     # 1. Buscamos la sucursal específica
     sucursal = get_object_or_404(Sucursal, id=sucursal_id)
@@ -29,6 +49,7 @@ def panel_mesas(request, sucursal_id):
 
     return render(request, 'operaciones/panel_mesas.html', context)
 
+@rol_requerido('MESERO', 'GERENTE')
 def tomar_pedido(request, mesa_id):
     
     mesa = get_object_or_404(Mesa, id=mesa_id)
@@ -46,6 +67,7 @@ def tomar_pedido(request, mesa_id):
     
     return render(request, 'operaciones/tomar_pedido.html', context)
 
+@rol_requerido('MESERO', 'GERENTE')
 def procesar_pedido(request):
     if request.method == 'POST':
         try:
@@ -86,6 +108,7 @@ def procesar_pedido(request):
     
     return JsonResponse({'status': 'error', 'mensaje': 'Método no permitido'})
 
+@rol_requerido('MESERO', 'GERENTE')
 def ver_cuentas_mesa(request, mesa_id):
     mesa = get_object_or_404(Mesa, id=mesa_id)
     
@@ -101,6 +124,7 @@ def ver_cuentas_mesa(request, mesa_id):
     }
     return render(request, 'operaciones/ver_cuentas_mesa.html', context)
 
+@rol_requerido('MESERO', 'GERENTE')
 def detalle_cuenta(request, pedido_id):
     # Buscamos el pedido específico
     pedido = get_object_or_404(Pedido, id=pedido_id)
@@ -115,6 +139,7 @@ def detalle_cuenta(request, pedido_id):
     }
     return render(request, 'operaciones/detalle_cuenta.html', context)
 
+@rol_requerido('MESERO', 'GERENTE')
 def cobrar_pedido(request, pedido_id):
     if request.method == 'POST':
         # 1. Buscamos el pedido
@@ -129,6 +154,7 @@ def cobrar_pedido(request, pedido_id):
         
     return JsonResponse({'status': 'error', 'mensaje': 'Método no permitido'})
 
+@rol_requerido('MESERO', 'GERENTE')
 def imprimir_ticket(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id)
     detalles = pedido.detalles.all()
@@ -155,6 +181,7 @@ def imprimir_ticket(request, pedido_id):
 
     return response
 
+@rol_requerido('CHEF', 'GERENTE')
 def pantalla_cocina(request, sucursal_id):
     sucursal = get_object_or_404(Sucursal, id=sucursal_id)
     
@@ -170,6 +197,7 @@ def pantalla_cocina(request, sucursal_id):
     }
     return render(request, 'operaciones/pantalla_cocina.html', context)
 
+@rol_requerido('CHEF', 'GERENTE')
 def actualizar_estado_pedido(request, pedido_id):
     if request.method == 'POST':
         try:
@@ -186,6 +214,7 @@ def actualizar_estado_pedido(request, pedido_id):
             
     return JsonResponse({'status': 'error', 'mensaje': 'Método no permitido'})
 
+@rol_requerido('MESERO', 'GERENTE')
 def entregar_pedido(request, pedido_id):
     if request.method == 'POST':
         pedido = get_object_or_404(Pedido, id=pedido_id)
@@ -197,3 +226,129 @@ def entregar_pedido(request, pedido_id):
         return redirect('ver_cuentas_mesa', mesa_id=pedido.mesa.id)
         
     return JsonResponse({'status': 'error', 'mensaje': 'Método no permitido'})
+
+@rol_requerido('GERENTE')
+def dashboard_gerencia(request, sucursal_id):
+    sucursal = get_object_or_404(Sucursal, id=sucursal_id)
+    
+    pedidos_pagados = Pedido.objects.filter(
+        mesa__sucursal=sucursal, 
+        estado='PAGADO'
+    )
+    
+    ingresos_totales = pedidos_pagados.aggregate(total=Sum('total_estimado'))['total'] or 0
+    cantidad_ventas = pedidos_pagados.count()
+    
+    # NUEVO: Calculamos el ticket promedio directamente en el servidor (Python)
+    ticket_promedio = (ingresos_totales / cantidad_ventas) if cantidad_ventas > 0 else 0
+    
+    platos_top = DetallePedido.objects.filter(
+        pedido__in=pedidos_pagados
+    ).values(
+        'disponibilidad__plato__nombre'
+    ).annotate(
+        cantidad_vendida=Sum('cantidad')
+    ).order_by('-cantidad_vendida')[:5]
+
+    context = {
+        'sucursal': sucursal,
+        'ingresos_totales': ingresos_totales,
+        'cantidad_ventas': cantidad_ventas,
+        'ticket_promedio': ticket_promedio,  # Pasamos el valor ya calculado
+        'platos_top': platos_top,
+    }
+    
+    return render(request, 'operaciones/dashboard.html', context)
+
+
+def login_empleado(request):
+    # Si el usuario ya inició sesión, no le mostramos el login de nuevo, lo redirigimos
+    if request.user.is_authenticated and hasattr(request.user, 'perfil'):
+        rol = request.user.perfil.rol
+        sucursal_id = request.user.perfil.sucursal.id
+        if rol == 'MESERO': return redirect('panel_mesas', sucursal_id=sucursal_id)
+        if rol == 'CHEF': return redirect('pantalla_cocina', sucursal_id=sucursal_id)
+        if rol == 'GERENTE': return redirect('dashboard_gerencia', sucursal_id=sucursal_id)
+
+    # Si apenas va a iniciar sesión
+    if request.method == 'POST':
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            usuario = form.get_user()
+            login(request, usuario)
+            
+            # Verificamos qué rol tiene para mandarlo a su pantalla
+            if hasattr(usuario, 'perfil'):
+                rol = usuario.perfil.rol
+                sucursal_id = usuario.perfil.sucursal.id
+                
+                if rol == 'MESERO':
+                    return redirect('panel_mesas', sucursal_id=sucursal_id)
+                elif rol == 'CHEF':
+                    return redirect('pantalla_cocina', sucursal_id=sucursal_id)
+                elif rol == 'GERENTE':
+                    return redirect('dashboard_gerencia', sucursal_id=sucursal_id)
+            
+            # Si es un superusuario sin perfil, lo mandamos al panel de admin
+            return redirect('/admin/')
+    else:
+        form = AuthenticationForm()
+
+    return render(request, 'operaciones/login.html', {'form': form})
+
+def logout_empleado(request):
+    logout(request) # Cierra la sesión en Django
+    return redirect('login') # Lo devuelve al semáforo inicial
+
+
+@rol_requerido('GERENTE')
+def gestion_empleados(request, sucursal_id):
+    sucursal = get_object_or_404(Sucursal, id=sucursal_id)
+    error = None
+    exito = None
+
+    if request.method == 'POST':
+        # Capturamos todos los campos del nuevo formulario
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        rol = request.POST.get('rol')
+        email = request.POST.get('email')
+        cedula = request.POST.get('cedula')
+        telefono = request.POST.get('telefono')
+
+        # 1. Validamos que el usuario no exista
+        if User.objects.filter(username=username).exists():
+            error = "Ese nombre de usuario ya está en uso."
+        # 2. Validamos que el correo no esté repetido en la base de datos
+        elif User.objects.filter(email=email).exists():
+            error = "Ese correo electrónico ya está registrado."
+        else:
+            try:
+                # 3. Creamos el usuario con su correo real
+                nuevo_user = User.objects.create_user(
+                    username=username, 
+                    email=email, 
+                    password=password
+                )
+                
+                # 4. Creamos el perfil guardando la cédula y el teléfono
+                PerfilEmpleado.objects.create(
+                    usuario=nuevo_user, 
+                    rol=rol, 
+                    sucursal=sucursal,
+                    cedula=cedula,
+                    telefono=telefono
+                )
+                exito = f"Empleado '{username}' agregado correctamente."
+            except Exception as e:
+                error = f"Error al guardar: {str(e)}"
+
+    empleados = PerfilEmpleado.objects.filter(sucursal=sucursal).order_by('rol')
+    
+    context = {
+        'sucursal': sucursal,
+        'empleados': empleados,
+        'error': error,
+        'exito': exito
+    }
+    return render(request, 'operaciones/gestion_empleados.html', context)

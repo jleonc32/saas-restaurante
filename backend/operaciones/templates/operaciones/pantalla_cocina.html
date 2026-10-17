@@ -37,7 +37,10 @@
 
     <div class="header">
         <h1>👨‍🍳 KDS - {{ sucursal.nombre_sucursal }}</h1>
-        <span style="color: #888;">Actualización automática activada...</span>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <span style="color: #888;">Actualización automática...</span>
+            <a href="{% url 'logout' %}" style="background-color: #e74c3c; color: white; padding: 8px 15px; text-decoration: none; border-radius: 5px; font-weight: bold;">Cerrar Sesión</a>
+        </div>
     </div>
 
     <div class="grid-pedidos">

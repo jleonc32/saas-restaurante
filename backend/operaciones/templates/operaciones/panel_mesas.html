@@ -32,9 +32,12 @@
 <body>
 
     <!-- CABECERA DEL SISTEMA -->
-    <div class="header">
-        <h1>👨‍🍳 Panel de Servicio</h1>
-        <span>{{ sucursal.nombre_sucursal }}</span>
+    <div class="header" style="display: flex; justify-content: space-between; align-items: center; padding: 20px; background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px;">
+        <div>
+            <h1 style="margin: 0; color: #2c3e50;">🍽️ Panel de Mesas</h1>
+            <span style="color: #7f8c8d; font-weight: bold; font-size: 14px;">{{ sucursal.nombre_sucursal }}</span>
+        </div>
+        <a href="{% url 'logout' %}" style="background-color: #e74c3c; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; transition: 0.3s;">🚪 Cerrar Sesión</a>
     </div>
 
     <!-- CUADRÍCULA DE MESAS -->

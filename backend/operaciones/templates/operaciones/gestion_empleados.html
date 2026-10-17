@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Personal - {{ sucursal.nombre_sucursal }}</title>
+    <style>
+        /* Heredamos la estructura principal del dashboard */
+        body { margin: 0; padding: 0; display: flex; height: 100vh; background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif; color: #333; }
+        .sidebar { width: 260px; background: #2c3e50; color: white; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 25px 20px; font-size: 22px; font-weight: bold; border-bottom: 1px solid #1a252f; text-align: center; color: #ecf0f1; }
+        .nav-links { list-style: none; padding: 0; margin: 0; flex-grow: 1; }
+        .nav-links li a { display: block; padding: 18px 25px; color: #bdc3c7; text-decoration: none; border-bottom: 1px solid #1a252f; transition: 0.3s; font-size: 16px; }
+        .nav-links li a:hover { background: #34495e; color: white; border-left: 5px solid #3498db; }
+        .nav-links li a.active { background: #34495e; color: white; border-left: 5px solid #3498db; font-weight: bold; }
+        .btn-logout { background: #e74c3c; color: white; padding: 18px; text-align: center; text-decoration: none; font-weight: bold; display: block; }
+        .main-content { flex-grow: 1; padding: 30px; overflow-y: auto; }
+        
+        /* Estilos específicos para esta vista */
+        .content-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+        .panel { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .panel h3 { margin-top: 0; color: #34495e; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+        
+        /* Tabla de empleados */
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
+        th { color: #7f8c8d; font-size: 14px; text-transform: uppercase; }
+        .badge-rol { padding: 4px 10px; border-radius: 15px; font-size: 12px; font-weight: bold; color: white; }
+        .bg-gerente { background-color: #9b59b6; }
+        .bg-chef { background-color: #e67e22; }
+        .bg-mesero { background-color: #2ecc71; }
+        
+        /* Formulario */
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-size: 14px; font-weight: bold; color: #34495e; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        .btn-submit { background: #28a745; color: white; padding: 12px; border: none; width: 100%; border-radius: 5px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        
+        .alerta { padding: 10px; border-radius: 5px; margin-bottom: 15px; font-size: 14px; }
+        .alerta-error { background: #fadbd8; color: #c0392b; }
+        .alerta-exito { background: #d4efdf; color: #27ae60; }
+    </style>
+</head>
+<body>
+
+    <!-- BARRA LATERAL -->
+    <aside class="sidebar">
+        <div class="sidebar-header">Panel Gerencial</div>
+        <ul class="nav-links">
+            <li><a href="{% url 'dashboard_gerencia' sucursal.id %}">📊 Estadísticas</a></li>
+            <li><a href="{% url 'gestion_empleados' sucursal.id %}" class="active">👥 Gestión de Personal</a></li>
+        </ul>
+        <a href="{% url 'logout' %}" class="btn-logout">🚪 Cerrar Sesión</a>
+    </aside>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="main-content">
+        <h1 style="color: #2c3e50; margin-top: 0; margin-bottom: 30px;">Gestión de Personal</h1>
+        
+        <div class="content-grid">
+            <!-- Lista de Empleados -->
+            <div class="panel">
+                <h3>Equipo Actual</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Rol</th>
+                            <th>Sucursal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for empleado in empleados %}
+                        <tr>
+                            <td><strong>{{ empleado.usuario.username }}</strong></td>
+                            <td>
+                                <span class="badge-rol 
+                                    {% if empleado.rol == 'GERENTE' %}bg-gerente
+                                    {% elif empleado.rol == 'CHEF' %}bg-chef
+                                    {% else %}bg-mesero{% endif %}">
+                                    {{ empleado.get_rol_display }}
+                                </span>
+                            </td>
+                            <td>{{ empleado.sucursal.nombre_sucursal }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Formulario para crear -->
+            <div class="panel">
+                <h3>+ Nuevo Empleado</h3>
+                
+                {% if error %}<div class="alerta alerta-error">{{ error }}</div>{% endif %}
+                {% if exito %}<div class="alerta alerta-exito">{{ exito }}</div>{% endif %}
+
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    <div class="form-group">
+                        <label>Nombre de Usuario (Para iniciar sesión)</label>
+                        <input type="text" name="username" required placeholder="ej: pablo_leon">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Cédula / Identificación</label>
+                        <input type="text" name="cedula" required placeholder="0900000000">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Correo Electrónico</label>
+                        <input type="email" name="email" required placeholder="empleado@ejemplo.com">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Teléfono de Contacto</label>
+                        <input type="text" name="telefono" required placeholder="0999999999">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Contraseña</label>
+                        <input type="password" name="password" required placeholder="Contraseña segura">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Rol del Sistema</label>
+                        <select name="rol" required>
+                            <option value="MESERO">Mesero (Toma Pedidos)</option>
+                            <option value="CHEF">Chef (Pantalla de Cocina)</option>
+                            <option value="GERENTE">Gerente (Acceso Total)</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn-submit">Registrar Empleado</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+</body>
+</html>

@@ -3,7 +3,7 @@ from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
 from menu.views import menu_digital
-from operaciones.views import panel_mesas, tomar_pedido, procesar_pedido, ver_cuentas_mesa, detalle_cuenta, cobrar_pedido, imprimir_ticket, pantalla_cocina, actualizar_estado_pedido, entregar_pedido
+from operaciones.views import panel_mesas, tomar_pedido, procesar_pedido, ver_cuentas_mesa, detalle_cuenta, cobrar_pedido, imprimir_ticket, pantalla_cocina, actualizar_estado_pedido, entregar_pedido, dashboard_gerencia, login_empleado, logout_empleado, gestion_empleados
 urlpatterns = [
     path('admin/', admin.site.urls),
     # Esta es la URL mágica. Captura el UUID del QR y se lo pasa a la vista
@@ -22,6 +22,16 @@ urlpatterns = [
     path('cocina/<int:sucursal_id>/', pantalla_cocina, name='pantalla_cocina'),
     path('cocina/actualizar-estado/<int:pedido_id>/', actualizar_estado_pedido, name='actualizar_estado_pedido'),
     path('mesero/cuenta/<int:pedido_id>/entregar/', entregar_pedido, name='entregar_pedido'),
+    # RUTAS DE GERENCIA / ADMINISTRACIÓN
+    path('gerencia/dashboard/<int:sucursal_id>/', dashboard_gerencia, name='dashboard_gerencia'),
+    # RUTA PRINCIPAL (El Semáforo de Login)
+    path('', login_empleado, name='login'),
+    # RUTA PARA CERRAR SESIÓN
+    path('logout/', logout_empleado, name='logout'),
+    
+    # RUTA DEL PANEL DE EMPLEADOS (Gerencia)
+    path('gerencia/dashboard/<int:sucursal_id>/', dashboard_gerencia, name='dashboard_gerencia'),
+    path('gerencia/empleados/<int:sucursal_id>/', gestion_empleados, name='gestion_empleados'),
 ]
 
 # Esto solo se usa en desarrollo local para poder ver las fotos y archivos 3D

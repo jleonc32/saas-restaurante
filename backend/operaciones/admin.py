@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html #nuevo para poder inyectar HTML (la imagen) en el panel
-from .models import DisponibilidadSucursal, Mesa, Pedido, DetallePedido
+from .models import DisponibilidadSucursal, Mesa, Pedido, DetallePedido, PerfilEmpleado
 
 class MesaAdmin(admin.ModelAdmin):
     readonly_fields= ('qr_token', 'qr_imagen', 'ver_qr_grande')
@@ -19,6 +19,14 @@ class MesaAdmin(admin.ModelAdmin):
             return format_html('<img src="{}" width="200" height="200" />', obj.qr_imagen.url)
         return "-"
     ver_qr_grande.short_description = "Vista Previa QR"
+    
+# Asegúrate de que PerfilEmpleado esté en tu importación arriba, por ejemplo:
+# from .models import Sucursal, Mesa, Pedido, DetallePedido, DisponibilidadSucursal, PerfilEmpleado
+
+@admin.register(PerfilEmpleado)
+class PerfilEmpleadoAdmin(admin.ModelAdmin):
+    list_display = ('usuario', 'rol', 'sucursal')
+    list_filter = ('rol', 'sucursal')
 
 admin.site.register(DisponibilidadSucursal)
 admin.site.register(Mesa, MesaAdmin)

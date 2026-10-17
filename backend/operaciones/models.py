@@ -5,6 +5,7 @@ from django.core.files import File #para guardar el archivo en Django
 from django.db import models
 from django.utils import timezone
 from django.conf import settings # Para importar tu modelo de Usuario personalizado
+from django.conf import settings
 
 # Importamos los modelos de las otras apps
 from gestion.models import Sucursal
@@ -107,3 +108,20 @@ class DetallePedido(models.Model):
 
     def __str__(self):
         return f"{self.cantidad}x {self.disponibilidad.plato.nombre} (Pedido #{self.pedido.id})"
+    
+class PerfilEmpleado(models.Model):
+    ROLES = (
+        ('GERENTE', 'Gerente / Administrador'),
+        ('CHEF', 'Cocinero / Chef'),
+        ('MESERO', 'Mesero'),
+    )
+    usuario = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='perfil')
+    rol = models.CharField(max_length=20, choices=ROLES)
+    sucursal = models.ForeignKey(Sucursal, on_delete=models.CASCADE, related_name='empleados')
+    
+    # NUEVOS CAMPOS DE RECURSOS HUMANOS
+    cedula = models.CharField(max_length=15, null=True, blank=True)
+    telefono = models.CharField(max_length=15, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.usuario.username} - {self.get_rol_display()} ({self.sucursal.nombre_sucursal})"

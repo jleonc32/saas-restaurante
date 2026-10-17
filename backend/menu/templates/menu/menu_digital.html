@@ -35,24 +35,28 @@
 
     <!-- CUERPO DEL MENÚ -->
     <div class="container">
-        {% for categoria, disponibilidades in menu_organizado.items %}
-            <h2 class="categoria-titulo">{{ categoria.nombre }}</h2>
+        <!-- Usamos menu_organizado como lo definiste en tu view -->
+        {% for categoria, items in menu_organizado.items %}
+            <!-- Accedemos al nombre de tu objeto categoría -->
+            <h2 class="categoria-titulo">{{ categoria.nombre|default:"Platos Principales" }}</h2>
             
-            {% for item in disponibilidades %}
+            {% for item in items %}
                 <div class="plato-card">
                     <div class="plato-info">
-                        <h3 class="plato-nombre">{{ item.plato.nombre }}</h3>
-                        <p class="plato-desc">{{ item.plato.descripcion }}</p>
-                        <span class="plato-precio">${{ item.precio_local }}</span>
+                        <h3>{{ item.plato.nombre }}</h3>
+                        <p>{{ item.plato.descripcion|default:"Delicioso plato preparado con los mejores ingredientes." }}</p>
                     </div>
-                    {% if item.plato.imagen_foto %}
-                        <img class="plato-img" src="{{ item.plato.imagen_foto.url }}" alt="{{ item.plato.nombre }}">
-                    {% endif %}
+                    <div class="plato-precio">
+                        ${{ item.precio_local }}
+                    </div>
                 </div>
             {% endfor %}
             
         {% empty %}
-            <p style="text-align: center; color: #777;">No hay platos disponibles en este momento.</p>
+            <div style="text-align: center; margin-top: 50px; color: #666;">
+                <h3>Lo sentimos</h3>
+                <p>El menú no está disponible en este momento.</p>
+            </div>
         {% endfor %}
     </div>
 
